@@ -20,12 +20,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Crea la lista dei partecipanti (se ce ne sono)
+        let participantsSection = "";
+        if (details.participants.length > 0) {
+          participantsSection = `
+            <div class="participants-section">
+              <strong>Partecipanti:</strong>
+              <div class="participants-list">
+                ${details.participants.map(p => `
+                  <span class="participant-item">
+                    <span class="participant-email">${p}</span>
+                    <span class="delete-participant" title="Rimuovi" data-activity="${name}" data-email="${p}">&#128465;</span>
+                  </span>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        } else {
+          participantsSection = `
+            <div class="participants-section empty">
+              <em>Nessun partecipante ancora iscritto.</em>
+            </div>
+          `;
+        }
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsSection}
         `;
+
+        activityCard.addEventListener("click", async (e) => {
+          if (e.target.classList.contains("delete-participant")) {
+            const email = e.target.getAttribute("data-email");
+            const activityName = e.target.getAttribute("data-activity");
+            if (confirm(`Vuoi davvero rimuovere ${email} da ${activityName}?`)) {
+              try {
+                const response = await fetch(`/activities/${encodeURIComponent(activityName)}/participant?email=${encodeURIComponent(email)}`, {
+                  method: "DELETE"
+                });
+                const result = await response.json();
+                if (response.ok) {
+                  fetchActivities();
+                } else {
+                  alert(result.detail || "Errore nella rimozione del partecipante.");
+                }
+              } catch (err) {
+                alert("Errore di rete nella rimozione del partecipante.");
+              }
+            }
+          }
+        });
 
         activitiesList.appendChild(activityCard);
 
